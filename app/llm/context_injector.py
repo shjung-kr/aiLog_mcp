@@ -1,0 +1,2 @@
+class ContextInjector:
+    pass

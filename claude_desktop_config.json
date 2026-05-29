@@ -1,0 +1,19 @@
+{
+  "_comment": "이 파일의 내용을 Claude Desktop의 claude_desktop_config.json 에 병합하세요.",
+  "_config_path_mac": "~/Library/Application Support/Claude/claude_desktop_config.json",
+  "_config_path_windows": "%APPDATA%\\Claude\\claude_desktop_config.json",
+
+  "mcpServers": {
+    "ailog": {
+      "command": "/home/shjung/projects/aiLog_mcp/.venv/bin/python",
+      "args": ["/home/shjung/projects/aiLog_mcp/server.py"],
+      "env": {
+        "DATABASE_URL": "postgresql+psycopg://postgres:postgres@localhost:5432/ailog",
+        "OPENAI_API_KEY": "여기에_OpenAI_키_입력",
+        "OPENAI_MODEL": "gpt-4o-mini",
+        "OPENAI_EMBEDDING_MODEL": "text-embedding-3-small",
+        "EPISODE_IDLE_SECONDS": "60"
+      }
+    }
+  }
+}

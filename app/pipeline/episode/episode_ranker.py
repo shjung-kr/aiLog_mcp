@@ -1,0 +1,2 @@
+class EpisodeRanker:
+    pass

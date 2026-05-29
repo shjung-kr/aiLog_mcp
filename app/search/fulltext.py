@@ -1,0 +1,2 @@
+class FullTextSearch:
+    pass
