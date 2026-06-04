@@ -8,7 +8,7 @@
       "command": "/home/shjung/projects/aiLog_mcp/.venv/bin/python",
       "args": ["/home/shjung/projects/aiLog_mcp/server.py"],
       "env": {
-        "DATABASE_URL": "postgresql+psycopg://postgres:postgres@localhost:5432/ailog",
+        "DATABASE_URL": "postgresql+psycopg://postgres:postgres@localhost:5433/ailog",
         "OPENAI_API_KEY": "여기에_OpenAI_키_입력",
         "OPENAI_MODEL": "gpt-4o-mini",
         "OPENAI_EMBEDDING_MODEL": "text-embedding-3-small",
