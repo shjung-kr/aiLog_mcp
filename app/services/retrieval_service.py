@@ -1,6 +1,5 @@
 import re
 from dataclasses import asdict, dataclass
-from math import sqrt
 
 # Phrases that indicate recall/search intent rather than the content being searched.
 # We strip these so the embedding focuses on the actual topic, not the meta-framing.
@@ -53,9 +52,11 @@ from app.db.models.search_log import SearchLog
 from app.db.repositories.episode_repository import EpisodeRepository
 from app.db.repositories.search_repository import SearchRepository
 from app.llm.client import LLMClient
+from app.search.vector import VectorSearch
 from app.services.rawlog_service import RawLogService
 from app.utils.datetime import utc_now
 from app.utils.ids import new_id
+from app.utils.math import cosine_similarity
 
 EMBEDDING_METADATA_KEY = "semantic_embedding"
 TITLE_EMBEDDING_METADATA_KEY = "title_embedding"
@@ -104,28 +105,18 @@ class RetrievalService:
         embedding_query = self._build_embedding_query(query_parse, recent_turns)
         query_embedding = self.llm_client.embed_texts([embedding_query])[0]
         query_tokens = self._tokenize(query_parse.content_query or query)
-        candidates: list[tuple[float, Episode]] = []
-        for episode in self.episode_repository.list_all(limit=500):
-            metadata = episode.metadata_json or {}
-            embedding = metadata.get(EMBEDDING_METADATA_KEY)
-            if not isinstance(embedding, list):
-                continue
-            cosine = self._cosine_similarity(query_embedding, [float(v) for v in embedding])
-            title_embedding = metadata.get(TITLE_EMBEDDING_METADATA_KEY)
-            if isinstance(title_embedding, list):
-                cosine_title = self._cosine_similarity(query_embedding, [float(v) for v in title_embedding])
-                cosine = max(cosine, cosine_title)
-            semantic_text = metadata.get(SEMANTIC_TEXT_METADATA_KEY, "") or ""
-            # Skip episodes that only record a failed/empty recall — they contain no useful content.
-            if _FAILED_RECALL_RE.search(semantic_text[:300]):
-                continue
-            keyword_score = self._keyword_overlap(query_tokens, semantic_text)
-            score = cosine * (1 - KEYWORD_BOOST_WEIGHT) + keyword_score * KEYWORD_BOOST_WEIGHT
-            # Boost episodes that have been promoted to long-term memory.
-            if metadata.get("promoted_to_ltm"):
-                score += 0.05
-            if score >= RETRIEVAL_SCORE_THRESHOLD:
-                candidates.append((score, episode))
+
+        all_episodes = self.episode_repository.list_all(limit=500)
+        vector_search = VectorSearch(all_episodes)
+        scored = vector_search.search(
+            query_embedding=query_embedding,
+            query_tokens=query_tokens,
+            keyword_boost_weight=KEYWORD_BOOST_WEIGHT,
+            failed_recall_re=_FAILED_RECALL_RE,
+        )
+        candidates: list[tuple[float, Episode]] = [
+            (score, ep) for score, ep in scored if score >= RETRIEVAL_SCORE_THRESHOLD
+        ]
 
         ranked = sorted(candidates, key=lambda item: item[0], reverse=True)[:RETRIEVAL_CANDIDATE_LIMIT]
         retrieved_log = [
@@ -318,22 +309,3 @@ class RetrievalService:
 
     def _tokenize(self, text: str) -> set[str]:
         return {t for t in re.findall(r"[0-9A-Za-z가-힣]{2,}", text.lower()) if len(t) >= 2}
-
-    def _keyword_overlap(self, query_tokens: set[str], text: str) -> float:
-        if not query_tokens or not text:
-            return 0.0
-        text_tokens = self._tokenize(text)
-        if not text_tokens:
-            return 0.0
-        matched = query_tokens & text_tokens
-        return len(matched) / len(query_tokens)
-
-    def _cosine_similarity(self, left: list[float], right: list[float]) -> float:
-        if not left or not right or len(left) != len(right):
-            return 0.0
-        dot = sum(lv * rv for lv, rv in zip(left, right))
-        left_norm = sqrt(sum(v * v for v in left))
-        right_norm = sqrt(sum(v * v for v in right))
-        if left_norm == 0 or right_norm == 0:
-            return 0.0
-        return dot / (left_norm * right_norm)

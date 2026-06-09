@@ -1,5 +1,4 @@
 import re
-from math import sqrt
 
 from app.db.models.episode import Episode
 from app.llm.client import LLMClient
@@ -12,6 +11,7 @@ from app.pipeline.episode.episode_builder import (
 from app.services.episode_service import EpisodeService
 from app.services.gist_service import GistService
 from app.services.memory_promotion_service import MemoryPromotionService
+from app.utils.math import cosine_similarity
 from app.services.rawlog_service import RawLogService
 from app.services.turn_service import TurnService
 
@@ -437,14 +437,7 @@ class EpisodeBuilderService:
         )
 
     def _cosine_similarity(self, left: list[float], right: list[float]) -> float:
-        if not left or not right or len(left) != len(right):
-            return 0.0
-        dot = sum(left_value * right_value for left_value, right_value in zip(left, right))
-        left_norm = sqrt(sum(value * value for value in left))
-        right_norm = sqrt(sum(value * value for value in right))
-        if left_norm == 0 or right_norm == 0:
-            return 0.0
-        return dot / (left_norm * right_norm)
+        return cosine_similarity(left, right)
 
     def _merge_score(
         self,

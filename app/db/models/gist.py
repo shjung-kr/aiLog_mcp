@@ -1,6 +1,10 @@
+from datetime import datetime
+
+from sqlalchemy import DateTime, Float, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Text, DateTime, Float, JSON
+
 from app.db.base import Base
+
 
 class Gist(Base):
     __tablename__ = "gists"
@@ -12,6 +16,6 @@ class Gist(Base):
     gist_text: Mapped[str] = mapped_column(Text)
     topic: Mapped[str | None] = mapped_column(String(255), nullable=True)
     intent: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[str] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)

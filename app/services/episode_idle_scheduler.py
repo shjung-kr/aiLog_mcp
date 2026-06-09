@@ -1,6 +1,9 @@
+import logging
 import threading
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 from app.db.repositories.episode_repository import EpisodeRepository
 from app.db.repositories.gist_repository import GistRepository
 from app.db.repositories.long_term_memory_repository import LongTermMemoryRepository
@@ -85,6 +88,7 @@ class EpisodeIdleScheduler:
                 user_style_service.analyze_and_update(session_id)
                 db.commit()
         except Exception:
+            logger.exception("episode pipeline failed for session %s", session_id)
             db.rollback()
         finally:
             db.close()
